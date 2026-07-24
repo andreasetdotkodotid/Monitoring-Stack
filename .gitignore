@@ -1,0 +1,9 @@
+.env
+*.log
+.DS_Store
+data/prometheus/*
+data/alertmanager/*
+data/grafana/*
+data/karma/*
+data/sla-reports/*
+config/targets/*.tmp

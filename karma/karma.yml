@@ -1,0 +1,32 @@
+alertmanager:
+  interval: 30s
+  servers:
+    - name: local
+      uri: http://alertmanager:9093
+      timeout: 10s
+
+karma:
+  name: nusawork-monitoring
+  listen:
+    address: 0.0.0.0
+    port: 8080
+  alertmanager:
+    proxy: true
+
+ui:
+  refresh: 30s
+  hideFiltersWhenIdle: false
+  colorTitlebar: true
+  minimalGroupWidth: 420
+  alertsPerGroup: 10
+  defaultSort: startsAt
+  groupBy:
+    - alertname
+    - product
+    - application
+    - environment
+    - service
+    - host
+  filters:
+    default:
+      - '@state=active'

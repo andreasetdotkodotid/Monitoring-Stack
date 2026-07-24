@@ -1,0 +1,19 @@
+[
+  {
+    "targets": [
+      "https://hris.example.com"
+    ],
+    "labels": {
+      "product": "nusawork",
+      "application": "hris",
+      "service": "nginx",
+      "environment": "production",
+      "location": "jakarta",
+      "team": "infra",
+      "host": "web01",
+      "target_address": "10.10.10.11",
+      "probe_url": "https://hris.example.com",
+      "probe_scheme": "https"
+    }
+  }
+]

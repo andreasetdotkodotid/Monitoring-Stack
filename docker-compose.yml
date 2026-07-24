@@ -1,0 +1,161 @@
+services:
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: prometheus
+    restart: unless-stopped
+    user: "65534:65534"
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-180d}
+      - --storage.tsdb.retention.size=${PROMETHEUS_RETENTION_SIZE:-20GB}
+      - --web.enable-lifecycle
+      - --web.external-url=https://${GRAFANA_DOMAIN:-monitoring.example.com}/prometheus/
+      - --web.route-prefix=/
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./prometheus:/etc/prometheus:ro
+      - ./config/targets:/etc/prometheus/targets:ro
+      - ./data/prometheus:/prometheus
+    depends_on:
+      file-sd-generator:
+        condition: service_completed_successfully
+      blackbox-exporter:
+        condition: service_started
+      alertmanager:
+        condition: service_started
+    networks: [monitoring]
+
+  file-sd-generator:
+    build:
+      context: ./scripts/file-sd
+    container_name: file-sd-generator
+    restart: "no"
+    volumes:
+      - ./targets.yml:/app/targets.yml:ro
+      - ./config/targets:/app/output
+    networks: [monitoring]
+
+  file-sd-watcher:
+    build:
+      context: ./scripts/file-sd
+    container_name: file-sd-watcher
+    restart: unless-stopped
+    command: ["python", "/app/generate.py", "--watch"]
+    volumes:
+      - ./targets.yml:/app/targets.yml:ro
+      - ./config/targets:/app/output
+    depends_on:
+      file-sd-generator:
+        condition: service_completed_successfully
+    networks: [monitoring]
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: alertmanager
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+      - --web.external-url=${ALERTMANAGER_EXTERNAL_URL:-https://monitoring.example.com/alertmanager/}
+      - --web.route-prefix=/
+    ports:
+      - "127.0.0.1:9093:9093"
+    volumes:
+      - ./alertmanager:/etc/alertmanager:ro
+      - ./data/alertmanager:/alertmanager
+    environment:
+      - SMTP_FROM=${SMTP_FROM}
+      - SMTP_SMARTHOST=${SMTP_SMARTHOST}
+      - SMTP_AUTH_USERNAME=${SMTP_AUTH_USERNAME}
+      - SMTP_AUTH_PASSWORD=${SMTP_AUTH_PASSWORD}
+      - SMTP_TO=${SMTP_TO}
+      - SMTP_REQUIRE_TLS=${SMTP_REQUIRE_TLS:-true}
+    networks: [monitoring]
+
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.25.0
+    container_name: blackbox-exporter
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/blackbox_exporter/config.yml
+    ports:
+      - "127.0.0.1:9115:9115"
+    volumes:
+      - ./blackbox:/etc/blackbox_exporter:ro
+    networks: [monitoring]
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: grafana
+    restart: unless-stopped
+    user: "472:472"
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - ./data/grafana:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    environment:
+      - GF_SERVER_DOMAIN=${GRAFANA_DOMAIN}
+      - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL}
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_SECURITY_SECRET_KEY=${GRAFANA_SECRET_KEY}
+      - GF_AUTH_DISABLE_LOGIN_FORM=false
+      - GF_AUTH_GOOGLE_ENABLED=true
+      - GF_AUTH_GOOGLE_ALLOW_SIGN_UP=true
+      - GF_AUTH_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GF_AUTH_GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GF_AUTH_GOOGLE_SCOPES=openid email profile
+      - GF_AUTH_GOOGLE_AUTH_URL=https://accounts.google.com/o/oauth2/v2/auth
+      - GF_AUTH_GOOGLE_TOKEN_URL=https://oauth2.googleapis.com/token
+      - GF_AUTH_GOOGLE_ALLOWED_DOMAINS=${GOOGLE_ALLOWED_DOMAINS}
+      - GF_AUTH_GOOGLE_ALLOWED_GROUPS=${GOOGLE_ALLOWED_GROUPS}
+      - GF_USERS_AUTO_ASSIGN_ORG_ROLE=Viewer
+      - GF_ANALYTICS_REPORTING_ENABLED=false
+      - GF_ANALYTICS_CHECK_FOR_UPDATES=false
+    depends_on:
+      - prometheus
+    networks: [monitoring]
+
+  karma:
+    image: ghcr.io/prymitive/karma:v0.121
+    container_name: karma
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/karma/karma.yml
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ./karma:/etc/karma:ro
+      - ./data/karma:/var/lib/karma
+    depends_on:
+      - alertmanager
+    networks: [monitoring]
+
+  sla-report:
+    build:
+      context: ./scripts/sla-report
+    container_name: sla-report
+    restart: unless-stopped
+    environment:
+      - TZ=${TZ:-Asia/Jakarta}
+      - PROMETHEUS_URL=http://prometheus:9090
+      - SMTP_FROM=${SMTP_FROM}
+      - SMTP_SMARTHOST=${SMTP_SMARTHOST}
+      - SMTP_AUTH_USERNAME=${SMTP_AUTH_USERNAME}
+      - SMTP_AUTH_PASSWORD=${SMTP_AUTH_PASSWORD}
+      - SMTP_TO=${SMTP_TO}
+      - REPORT_CRON=5 8 1 * *
+    volumes:
+      - ./data/sla-reports:/reports
+    depends_on:
+      - prometheus
+    networks: [monitoring]
+
+networks:
+  monitoring:
+    driver: bridge

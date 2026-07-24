@@ -1,0 +1,39 @@
+groups:
+  - name: availability.recording
+    interval: 30s
+    rules:
+      - record: host:up:probe_icmp
+        expr: max by (product, application, service, environment, location, team, host) (probe_success{job="blackbox_icmp"})
+
+      - record: host:up:node
+        expr: max by (product, application, service, environment, location, team, host) (up{job="node"})
+
+      - record: endpoint:up:http
+        expr: max by (product, application, service, environment, location, team, host, instance, probe_scheme, probe_url) (probe_success{job="blackbox_http"})
+
+      - record: tcp:up:port
+        expr: max by (product, application, service, environment, location, team, host, instance, port) (probe_success{job="blackbox_tcp"})
+
+      - record: host:availability_30d:ratio
+        expr: avg_over_time(host:up:probe_icmp[30d])
+
+      - record: host:downtime_30d:seconds
+        expr: (1 - avg_over_time(host:up:probe_icmp[30d])) * 30 * 24 * 3600
+
+      - record: host:availability_month:ratio
+        expr: avg_over_time(host:up:probe_icmp[31d])
+
+  - name: node.recording
+    interval: 30s
+    rules:
+      - record: node:cpu_usage:ratio
+        expr: 1 - avg by (product, application, service, environment, location, team, host) (rate(node_cpu_seconds_total{job="node",mode="idle"}[5m]))
+
+      - record: node:memory_usage:ratio
+        expr: 1 - (node_memory_MemAvailable_bytes{job="node"} / node_memory_MemTotal_bytes{job="node"})
+
+      - record: node:filesystem_usage:ratio
+        expr: 1 - (node_filesystem_avail_bytes{job="node",fstype!~"tmpfs|fuse.lxcfs|overlay|squashfs",mountpoint!~"/run.*|/var/lib/docker/.*"} / node_filesystem_size_bytes{job="node",fstype!~"tmpfs|fuse.lxcfs|overlay|squashfs",mountpoint!~"/run.*|/var/lib/docker/.*"})
+
+      - record: node:inode_usage:ratio
+        expr: 1 - (node_filesystem_files_free{job="node",fstype!~"tmpfs|fuse.lxcfs|overlay|squashfs",mountpoint!~"/run.*|/var/lib/docker/.*"} / node_filesystem_files{job="node",fstype!~"tmpfs|fuse.lxcfs|overlay|squashfs",mountpoint!~"/run.*|/var/lib/docker/.*"})

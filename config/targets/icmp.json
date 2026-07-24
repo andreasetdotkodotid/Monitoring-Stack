@@ -1,0 +1,32 @@
+[
+  {
+    "targets": [
+      "10.10.10.11"
+    ],
+    "labels": {
+      "product": "nusawork",
+      "application": "hris",
+      "service": "nginx",
+      "environment": "production",
+      "location": "jakarta",
+      "team": "infra",
+      "host": "web01",
+      "target_address": "10.10.10.11"
+    }
+  },
+  {
+    "targets": [
+      "10.10.10.12"
+    ],
+    "labels": {
+      "product": "nusawork",
+      "application": "hris",
+      "service": "mariadb",
+      "environment": "production",
+      "location": "jakarta",
+      "team": "infra",
+      "host": "db01",
+      "target_address": "10.10.10.12"
+    }
+  }
+]

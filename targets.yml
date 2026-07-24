@@ -1,0 +1,39 @@
+servers:
+  - name: web01
+    address: 10.10.10.11
+    labels:
+      product: nusawork
+      application: hris
+      service: nginx
+      environment: production
+      location: jakarta
+      team: infra
+    exporters:
+      node: true
+      node_port: 9100
+    probes:
+      icmp: true
+      http:
+        - https://hris.example.com
+      tcp:
+        - 22
+        - 443
+      nginx_status:
+        - http://10.10.10.11/nginx_status
+
+  - name: db01
+    address: 10.10.10.12
+    labels:
+      product: nusawork
+      application: hris
+      service: mariadb
+      environment: production
+      location: jakarta
+      team: infra
+    exporters:
+      node: true
+      node_port: 9100
+    probes:
+      icmp: true
+      tcp:
+        - 3306

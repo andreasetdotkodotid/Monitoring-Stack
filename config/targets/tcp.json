@@ -1,0 +1,50 @@
+[
+  {
+    "targets": [
+      "10.10.10.11:22"
+    ],
+    "labels": {
+      "product": "nusawork",
+      "application": "hris",
+      "service": "nginx",
+      "environment": "production",
+      "location": "jakarta",
+      "team": "infra",
+      "host": "web01",
+      "target_address": "10.10.10.11",
+      "port": "22"
+    }
+  },
+  {
+    "targets": [
+      "10.10.10.11:443"
+    ],
+    "labels": {
+      "product": "nusawork",
+      "application": "hris",
+      "service": "nginx",
+      "environment": "production",
+      "location": "jakarta",
+      "team": "infra",
+      "host": "web01",
+      "target_address": "10.10.10.11",
+      "port": "443"
+    }
+  },
+  {
+    "targets": [
+      "10.10.10.12:3306"
+    ],
+    "labels": {
+      "product": "nusawork",
+      "application": "hris",
+      "service": "mariadb",
+      "environment": "production",
+      "location": "jakarta",
+      "team": "infra",
+      "host": "db01",
+      "target_address": "10.10.10.12",
+      "port": "3306"
+    }
+  }
+]
