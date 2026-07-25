@@ -43,13 +43,31 @@ services:
       context: ./scripts/file-sd
     container_name: file-sd-watcher
     restart: unless-stopped
-    command: ["python", "/app/generate.py", "--watch"]
+    command: ["--watch"]
     volumes:
       - ./targets.yml:/app/targets.yml:ro
       - ./config/targets:/app/output
     depends_on:
       file-sd-generator:
         condition: service_completed_successfully
+    networks: [monitoring]
+
+  alertmanager-config:
+    build:
+      context: ./alertmanager
+      dockerfile: Dockerfile.envsubst
+    container_name: alertmanager-config
+    restart: "no"
+    environment:
+      - SMTP_FROM=${SMTP_FROM}
+      - SMTP_SMARTHOST=${SMTP_SMARTHOST}
+      - SMTP_AUTH_USERNAME=${SMTP_AUTH_USERNAME}
+      - SMTP_AUTH_PASSWORD=${SMTP_AUTH_PASSWORD}
+      - SMTP_TO=${SMTP_TO}
+      - SMTP_REQUIRE_TLS=${SMTP_REQUIRE_TLS:-true}
+    volumes:
+      - ./alertmanager/alertmanager.yml.tmpl:/templates/alertmanager.yml.tmpl:ro
+      - ./config/alertmanager:/output
     networks: [monitoring]
 
   alertmanager:
@@ -64,15 +82,11 @@ services:
     ports:
       - "127.0.0.1:9093:9093"
     volumes:
-      - ./alertmanager:/etc/alertmanager:ro
+      - ./config/alertmanager:/etc/alertmanager:ro
       - ./data/alertmanager:/alertmanager
-    environment:
-      - SMTP_FROM=${SMTP_FROM}
-      - SMTP_SMARTHOST=${SMTP_SMARTHOST}
-      - SMTP_AUTH_USERNAME=${SMTP_AUTH_USERNAME}
-      - SMTP_AUTH_PASSWORD=${SMTP_AUTH_PASSWORD}
-      - SMTP_TO=${SMTP_TO}
-      - SMTP_REQUIRE_TLS=${SMTP_REQUIRE_TLS:-true}
+    depends_on:
+      alertmanager-config:
+        condition: service_completed_successfully
     networks: [monitoring]
 
   blackbox-exporter:

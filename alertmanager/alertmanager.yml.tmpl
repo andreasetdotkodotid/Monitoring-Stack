@@ -1,0 +1,39 @@
+route:
+  receiver: email-default
+  group_by: [alertname, product, application, service, environment, location, team]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    - matchers:
+        - severity="critical"
+      receiver: email-critical
+      repeat_interval: 1h
+
+receivers:
+  - name: email-default
+    email_configs:
+      - to: ${SMTP_TO}
+        from: ${SMTP_FROM}
+        smarthost: ${SMTP_SMARTHOST}
+        auth_username: ${SMTP_AUTH_USERNAME}
+        auth_password: ${SMTP_AUTH_PASSWORD}
+        require_tls: ${SMTP_REQUIRE_TLS}
+        send_resolved: true
+
+  - name: email-critical
+    email_configs:
+      - to: ${SMTP_TO}
+        from: ${SMTP_FROM}
+        smarthost: ${SMTP_SMARTHOST}
+        auth_username: ${SMTP_AUTH_USERNAME}
+        auth_password: ${SMTP_AUTH_PASSWORD}
+        require_tls: ${SMTP_REQUIRE_TLS}
+        send_resolved: true
+
+inhibit_rules:
+  - source_matchers:
+      - alertname="HostDown"
+    target_matchers:
+      - alertname=~"ICMPDown|NodeExporterDown|TCPPortDown|HTTPDown|HTTPSDown|NginxDown"
+    equal: [host, product, application, environment]

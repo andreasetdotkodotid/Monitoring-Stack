@@ -7,3 +7,5 @@ data/grafana/*
 data/karma/*
 data/sla-reports/*
 config/targets/*.tmp
+config/alertmanager/*
+!config/alertmanager/.gitkeep

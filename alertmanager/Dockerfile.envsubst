@@ -1,0 +1,5 @@
+FROM alpine:3.20
+
+RUN apk add --no-cache gettext
+WORKDIR /work
+ENTRYPOINT ["/bin/sh", "-c", "envsubst < /templates/alertmanager.yml.tmpl > /output/alertmanager.yml"]

@@ -40,16 +40,17 @@ Stack ini menjalankan Prometheus, Grafana, Alertmanager, Karma, Blackbox Exporte
 
 Prometheus tidak perlu diubah saat server baru ditambah. Label dari `targets.yml` otomatis masuk ke metric Prometheus dan digunakan untuk filter dashboard, alert, recording rules, dan SLA report.
 
+`alertmanager/alertmanager.yml.tmpl` dirender oleh service `alertmanager-config` ke `config/alertmanager/alertmanager.yml` agar nilai SMTP dari `.env` benar-benar masuk ke konfigurasi Alertmanager. File hasil render berisi secret dan tidak boleh di-commit.
+
 ## Deployment awal
 
 ```bash
 cp .env.example .env
 nano .env
-mkdir -p data/prometheus data/alertmanager data/grafana data/karma data/sla-reports config/targets
-sudo chown -R 65534:65534 data/prometheus
+mkdir -p data/prometheus data/alertmanager data/grafana data/karma data/sla-reports config/targets config/alertmanager
+sudo chown -R 65534:65534 data/prometheus data/alertmanager
 sudo chown -R 472:472 data/grafana
-sudo chown -R 65534:65534 data/alertmanager
-sudo chown -R $(id -u):$(id -g) config/targets data/karma data/sla-reports
+sudo chown -R $(id -u):$(id -g) config data/karma data/sla-reports
 docker compose build
 docker compose up -d
 ```
