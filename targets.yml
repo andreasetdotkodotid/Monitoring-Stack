@@ -13,8 +13,6 @@ servers:
       tcp:
         - 22
         - 443
-      nginx_status:
-        - http://10.10.10.11/nginx_status
 
   - name: db01
     address: 10.10.10.12

@@ -35,5 +35,5 @@ inhibit_rules:
   - source_matchers:
       - alertname="HostDown"
     target_matchers:
-      - alertname=~"ICMPDown|NodeExporterDown|TCPPortDown|HTTPDown|HTTPSDown|NginxDown"
+      - alertname=~"ICMPDown|NodeExporterDown|TCPPortDown|HTTPDown|HTTPSDown"
     equal: [project, host]

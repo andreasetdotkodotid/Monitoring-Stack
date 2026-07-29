@@ -147,45 +147,16 @@ curl -X POST http://127.0.0.1:9090/-/reload
 
 Dashboard otomatis bisa difilter dengan `project=payroll`.
 
-## Nginx health monitoring
+## Scope monitoring
 
-### Stub status via Blackbox
+Stack ini difokuskan untuk uptime dan resource server:
 
-Konfigurasi Nginx:
+- Uptime host via ICMP Blackbox
+- Endpoint HTTP/HTTPS jika didefinisikan
+- TCP port jika didefinisikan
+- Resource Linux via Node Exporter
 
-```nginx
-location /nginx_status {
-  stub_status;
-  allow 10.10.10.10;
-  deny all;
-  access_log off;
-}
-```
-
-Kelebihan:
-
-- Sangat ringan
-- Tidak perlu install exporter tambahan
-- Cukup mengecek endpoint Nginx hidup dan merespons
-
-Kekurangan:
-
-- Tidak mengambil metric detail Nginx sebagai time series
-- Tidak ada breakdown request rate/status code/upstream
-
-### Nginx Prometheus Exporter
-
-Kelebihan:
-
-- Metric Nginx lebih kaya
-- Cocok untuk analisis traffic dan koneksi
-
-Kekurangan:
-
-- Perlu menjalankan exporter tambahan di server target atau dekat Nginx
-- Menambah maintenance surface
-
-Rekomendasi untuk requirement ini: gunakan stub_status + Blackbox lebih dulu. Tambahkan nginx exporter hanya untuk workload web yang butuh observability Nginx detail.
+Monitoring Nginx spesifik dihapus agar label alert tetap bersih dan tidak mencampur status host dengan status service aplikasi.
 
 ## PromQL penting
 
@@ -246,7 +217,6 @@ Alert dasar tersedia di `prometheus/rules/alerts.yml`:
 - Swap Usage High
 - Node Exporter Down
 - Blackbox Exporter Down
-- Nginx Down
 
 Semua alert membawa labels dari target.
 
@@ -332,6 +302,48 @@ docker push DOCKERHUB_USER/nusawork-sla-report:1.0.0
 ```
 
 Lalu ubah `docker-compose.yml` dari `build:` menjadi `image:` jika ingin pull dari Docker Hub.
+
+## Update deployment via Git di server
+
+Jika server sudah pernah deploy dan ada perubahan lokal, cek dulu:
+
+```bash
+cd /root/Monitoring-Stack
+git status
+```
+
+Jika perubahan lokal hanya generated file atau konfigurasi yang ingin disamakan dengan repository:
+
+```bash
+cd /root/Monitoring-Stack
+git fetch origin
+git checkout -- docker-compose.yml prometheus alertmanager karma grafana scripts targets.yml
+git pull --ff-only origin master
+```
+
+Render ulang file discovery dan Alertmanager config:
+
+```bash
+mkdir -p config/targets config/alertmanager data/prometheus data/alertmanager data/grafana data/karma data/sla-reports
+sudo chown -R 65534:65534 data/prometheus data/alertmanager
+sudo chown -R 472:472 data/grafana
+sudo chown -R $(id -u):$(id -g) config data/karma data/sla-reports
+docker compose down
+docker compose build file-sd-generator file-sd-watcher sla-report alertmanager-config
+docker compose run --rm file-sd-generator
+docker compose run --rm alertmanager-config
+docker compose up -d
+```
+
+Cek hasil:
+
+```bash
+docker compose ps
+docker compose logs --tail=50 prometheus alertmanager
+cat config/alertmanager/alertmanager.yml
+```
+
+Pastikan `config/alertmanager/alertmanager.yml` tidak berisi literal `${SMTP_SMARTHOST}`.
 
 ## Trade-off penting
 

@@ -40,7 +40,6 @@ def generate():
     icmp = []
     http = []
     tcp = []
-    nginx = []
 
     for server in config.get('servers', []):
         labels = safe_labels(server)
@@ -71,17 +70,10 @@ def generate():
             item_labels['port'] = str(port)
             tcp.append({'targets': [f'{address}:{port}'], 'labels': item_labels})
 
-        for url in probes.get('nginx_status') or []:
-            item_labels = dict(labels)
-            item_labels['service'] = 'nginx'
-            item_labels['nginx_monitoring'] = 'stub_status_probe'
-            nginx.append({'targets': [str(url)], 'labels': item_labels})
-
     write_json('node.json', node)
     write_json('icmp.json', icmp)
     write_json('http.json', http)
     write_json('tcp.json', tcp)
-    write_json('nginx.json', nginx)
 
 
 class Handler(FileSystemEventHandler):
