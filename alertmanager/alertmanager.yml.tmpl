@@ -1,6 +1,6 @@
 route:
   receiver: email-default
-  group_by: [alertname, product, application, service, environment, location, team]
+  group_by: [alertname, project, service, host]
   group_wait: 30s
   group_interval: 5m
   repeat_interval: 4h
@@ -36,4 +36,4 @@ inhibit_rules:
       - alertname="HostDown"
     target_matchers:
       - alertname=~"ICMPDown|NodeExporterDown|TCPPortDown|HTTPDown|HTTPSDown|NginxDown"
-    equal: [host, product, application, environment]
+    equal: [project, host]

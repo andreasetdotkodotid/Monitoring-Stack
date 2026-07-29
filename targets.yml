@@ -2,12 +2,7 @@ servers:
   - name: web01
     address: 10.10.10.11
     labels:
-      product: nusawork
-      application: hris
-      service: nginx
-      environment: production
-      location: jakarta
-      team: infra
+      project: nusawork
     exporters:
       node: true
       node_port: 9100
@@ -24,12 +19,7 @@ servers:
   - name: db01
     address: 10.10.10.12
     labels:
-      product: nusawork
-      application: hris
-      service: mariadb
-      environment: production
-      location: jakarta
-      team: infra
+      project: nusawork
     exporters:
       node: true
       node_port: 9100

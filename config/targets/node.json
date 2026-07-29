@@ -4,12 +4,7 @@
       "10.10.10.11:9100"
     ],
     "labels": {
-      "product": "nusawork",
-      "application": "hris",
-      "service": "nginx",
-      "environment": "production",
-      "location": "jakarta",
-      "team": "infra",
+      "project": "nusawork",
       "host": "web01",
       "target_address": "10.10.10.11"
     }
@@ -19,12 +14,7 @@
       "10.10.10.12:9100"
     ],
     "labels": {
-      "product": "nusawork",
-      "application": "hris",
-      "service": "mariadb",
-      "environment": "production",
-      "location": "jakarta",
-      "team": "infra",
+      "project": "nusawork",
       "host": "db01",
       "target_address": "10.10.10.12"
     }

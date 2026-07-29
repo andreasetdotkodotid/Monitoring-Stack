@@ -104,12 +104,7 @@ servers:
   - name: web01
     address: 10.10.10.11
     labels:
-      product: nusawork
-      application: hris
-      service: nginx
-      environment: production
-      location: jakarta
-      team: infra
+      project: nusawork
     exporters:
       node: true
       node_port: 9100
@@ -133,18 +128,13 @@ docker compose run --rm file-sd-generator
 curl -X POST http://127.0.0.1:9090/-/reload
 ```
 
-## Tambah aplikasi baru
+## Tambah project baru
 
 ```yaml
   - name: api01
     address: 10.10.20.21
     labels:
-      product: nusawork
-      application: payroll
-      service: api
-      environment: production
-      location: jakarta
-      team: backend
+      project: payroll
     exporters:
       node: true
     probes:
@@ -155,7 +145,7 @@ curl -X POST http://127.0.0.1:9090/-/reload
         - 443
 ```
 
-Dashboard otomatis bisa difilter dengan `application=payroll`.
+Dashboard otomatis bisa difilter dengan `project=payroll`.
 
 ## Nginx health monitoring
 
@@ -208,7 +198,7 @@ avg_over_time(host:up:probe_icmp{host="web01"}[30d]) * 100
 SLA bulanan approximation 30 hari:
 
 ```promql
-avg_over_time(host:up:probe_icmp{product="nusawork",application="hris"}[30d]) * 100
+avg_over_time(host:up:probe_icmp{project="nusawork"}[30d]) * 100
 ```
 
 Total downtime 30 hari detik:

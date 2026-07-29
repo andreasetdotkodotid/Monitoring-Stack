@@ -3,16 +3,16 @@ groups:
     interval: 30s
     rules:
       - record: host:up:probe_icmp
-        expr: max by (product, application, service, environment, location, team, host) (probe_success{job="blackbox_icmp"})
+        expr: max by (project, host) (probe_success{job="blackbox_icmp"})
 
       - record: host:up:node
-        expr: max by (product, application, service, environment, location, team, host) (up{job="node"})
+        expr: max by (project, host) (up{job="node"})
 
       - record: endpoint:up:http
-        expr: max by (product, application, service, environment, location, team, host, instance, probe_scheme, probe_url) (probe_success{job="blackbox_http"})
+        expr: max by (project, host, service, instance, probe_scheme, probe_url) (probe_success{job="blackbox_http"})
 
       - record: tcp:up:port
-        expr: max by (product, application, service, environment, location, team, host, instance, port) (probe_success{job="blackbox_tcp"})
+        expr: max by (project, host, service, instance, port) (probe_success{job="blackbox_tcp"})
 
       - record: host:availability_30d:ratio
         expr: avg_over_time(host:up:probe_icmp[30d])
@@ -27,7 +27,7 @@ groups:
     interval: 30s
     rules:
       - record: node:cpu_usage:ratio
-        expr: 1 - avg by (product, application, service, environment, location, team, host) (rate(node_cpu_seconds_total{job="node",mode="idle"}[5m]))
+        expr: 1 - avg by (project, host) (rate(node_cpu_seconds_total{job="node",mode="idle"}[5m]))
 
       - record: node:memory_usage:ratio
         expr: 1 - (node_memory_MemAvailable_bytes{job="node"} / node_memory_MemTotal_bytes{job="node"})

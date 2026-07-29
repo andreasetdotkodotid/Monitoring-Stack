@@ -96,7 +96,7 @@ groups:
           description: Memory usage above 90% for 10 minutes.
 
       - alert: HighLoadAverage
-        expr: node_load1{job="node"} / count by (product, application, service, environment, location, team, host, instance) (node_cpu_seconds_total{job="node",mode="idle"}) > 1.5
+        expr: node_load1{job="node"} / count by (project, host, instance) (node_cpu_seconds_total{job="node",mode="idle"}) > 1.5
         for: 10m
         labels:
           severity: warning

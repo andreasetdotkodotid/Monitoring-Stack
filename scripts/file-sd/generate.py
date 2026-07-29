@@ -18,7 +18,9 @@ OUTPUT = BASE / 'output' if (BASE / 'output').exists() or BASE == Path('/app') e
 
 
 def safe_labels(server):
-    labels = dict(server.get('labels') or {})
+    raw = dict(server.get('labels') or {})
+    labels = {}
+    labels['project'] = raw.get('project') or raw.get('product') or 'default'
     labels['host'] = server['name']
     labels['target_address'] = str(server['address'])
     return {str(k): str(v) for k, v in labels.items()}
@@ -55,6 +57,7 @@ def generate():
 
         for url in probes.get('http') or []:
             item_labels = dict(labels)
+            item_labels['service'] = 'http'
             item_labels['probe_url'] = str(url)
             if str(url).lower().startswith('https://'):
                 item_labels['probe_scheme'] = 'https'
@@ -64,11 +67,13 @@ def generate():
 
         for port in probes.get('tcp') or []:
             item_labels = dict(labels)
+            item_labels['service'] = 'tcp'
             item_labels['port'] = str(port)
             tcp.append({'targets': [f'{address}:{port}'], 'labels': item_labels})
 
         for url in probes.get('nginx_status') or []:
             item_labels = dict(labels)
+            item_labels['service'] = 'nginx'
             item_labels['nginx_monitoring'] = 'stub_status_probe'
             nginx.append({'targets': [str(url)], 'labels': item_labels})
 
