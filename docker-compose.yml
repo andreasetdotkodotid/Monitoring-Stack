@@ -171,6 +171,27 @@ services:
       - prometheus
     networks: [monitoring]
 
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/configuration/conf.d:/etc/nginx/conf.d
+      - ./nginx/configuration/fastcgi.conf:/etc/nginx/fastcgi.conf
+      - ./nginx/configuration/ssl:/etc/nginx/ssl
+      - ./nginx/configuration/snippets:/etc/nginx/snippets
+      - ./nginx/data:/var/www
+      - ./nginx/log:/var/log/nginx
+    depends_on:
+      - grafana
+      - prometheus
+      - alertmanager
+      - karma
+    networks: [monitoring]
+
 networks:
   monitoring:
     driver: bridge
