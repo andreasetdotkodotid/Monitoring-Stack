@@ -20,7 +20,9 @@ Stack ini menjalankan Prometheus, Grafana, Alertmanager, Karma, Blackbox Exporte
 ├── grafana/
 │   ├── provisioning/datasources/prometheus.yml
 │   ├── provisioning/dashboards/dashboards.yml
-│   └── dashboards/reusable-server-sla.json
+│   └── dashboards/
+│       ├── production/reusable-server-sla.json
+│       └── hris/hris-nusawork-infrastructure.json
 ├── scripts/
 │   ├── file-sd/
 │   └── sla-report/
@@ -89,11 +91,27 @@ Contoh Docker:
 docker run -d --name node-exporter --restart unless-stopped \
   --net=host --pid=host \
   -v /:/host:ro,rslave \
+  -v /run/systemd:/run/systemd:ro \
+  -v /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket:ro \
   quay.io/prometheus/node-exporter:v1.8.2 \
-  --path.rootfs=/host
+  --path.rootfs=/host \
+  --collector.systemd \
+  --collector.systemd.unit-include='(nginx|php.*fpm|mysql|mysqld|mariadb|redis|redis-server|docker|ssh|sshd)\.service'
 ```
 
 Pastikan port `9100/tcp` hanya dapat diakses dari server monitoring.
+
+Jika Node Exporter diinstall manual via systemd, tambahkan flag berikut ke environment service, misalnya `/etc/default/prometheus-node-exporter` atau `/etc/default/node_exporter`:
+
+```bash
+--collector.systemd --collector.systemd.unit-include='(nginx|php.*fpm|mysql|mysqld|mariadb|redis|redis-server|docker|ssh|sshd)\.service'
+```
+
+Validasi service metric:
+
+```bash
+curl -s localhost:9100/metrics | grep node_systemd_unit_state
+```
 
 ## targets.yml
 
@@ -207,6 +225,7 @@ Alert dasar tersedia di `prometheus/rules/alerts.yml`:
 - HTTP Down
 - HTTPS Down
 - TCP Port Down
+- Service Down
 - High CPU Usage
 - High Memory Usage
 - High Load Average

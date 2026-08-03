@@ -9,3 +9,4 @@ data/sla-reports/*
 config/targets/*.tmp
 config/alertmanager/*
 !config/alertmanager/.gitkeep
+grafana-hris-dashboard-design-guidance.md

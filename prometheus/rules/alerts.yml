@@ -46,6 +46,15 @@ groups:
           summary: TCP port {{ $labels.port }} down on {{ $labels.host }}
           description: TCP probe failed for {{ $labels.instance }}.
 
+      - alert: ServiceDown
+        expr: node_systemd_unit_state{job="node",state="active",name=~"(nginx|php.*fpm|mysql|mysqld|mariadb|redis|redis-server|docker|ssh|sshd)\\.service"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Service {{ $labels.name }} down on {{ $labels.host }}
+          description: Systemd service {{ $labels.name }} is not active on {{ $labels.host }}.
+
   - name: exporter.alerts
     rules:
       - alert: NodeExporterDown

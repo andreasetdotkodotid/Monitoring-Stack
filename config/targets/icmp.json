@@ -1,22 +1,22 @@
 [
   {
     "targets": [
-      "10.10.10.11"
+      "192.0.2.10"
     ],
     "labels": {
-      "project": "nusawork",
-      "host": "web01",
-      "target_address": "10.10.10.11"
+      "project": "example-project",
+      "host": "server01",
+      "target_address": "192.0.2.10"
     }
   },
   {
     "targets": [
-      "10.10.10.12"
+      "192.0.2.11"
     ],
     "labels": {
-      "project": "nusawork",
-      "host": "db01",
-      "target_address": "10.10.10.12"
+      "project": "example-project",
+      "host": "server02",
+      "target_address": "192.0.2.11"
     }
   }
 ]

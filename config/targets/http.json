@@ -1,15 +1,1 @@
-[
-  {
-    "targets": [
-      "https://hris.example.com"
-    ],
-    "labels": {
-      "project": "nusawork",
-      "host": "web01",
-      "target_address": "10.10.10.11",
-      "service": "http",
-      "probe_url": "https://hris.example.com",
-      "probe_scheme": "https"
-    }
-  }
-]
+[]
