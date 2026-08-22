@@ -171,6 +171,17 @@ services:
       - prometheus
     networks: [monitoring]
 
+  alert-history:
+    build:
+      context: ./scripts/alert-history
+    container_name: alert-history
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:18080:8080"
+    volumes:
+      - ./data/alert-history:/data
+    networks: [monitoring]
+
   nginx:
     image: nginx:latest
     container_name: nginx
@@ -190,6 +201,7 @@ services:
       - prometheus
       - alertmanager
       - karma
+      - alert-history
     networks: [monitoring]
 
 networks:

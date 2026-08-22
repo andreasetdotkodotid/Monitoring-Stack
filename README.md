@@ -21,6 +21,7 @@ Stack ini menggunakan Prometheus ecosystem:
 - Dashboard HRIS Infrastructure dengan overview dan detail host.
 - Alert dasar untuk host, exporter, resource, service, dan port.
 - SLA report bulanan via email.
+- Alert history berbasis SQLite untuk RCA/RFO sederhana.
 - Target server dikelola dari satu file `targets.yml`.
 - Persistent data memakai bind mount.
 
@@ -47,7 +48,7 @@ Stack ini menggunakan Prometheus ecosystem:
 cp .env.example .env
 nano .env
 mkdir -p config/targets config/alertmanager
-mkdir -p data/prometheus data/alertmanager data/grafana data/karma data/sla-reports
+mkdir -p data/prometheus data/alertmanager data/grafana data/karma data/sla-reports data/alert-history
 sudo chown -R 65534:65534 data/prometheus data/alertmanager
 sudo chown -R 472:472 data/grafana
 docker compose build
@@ -97,6 +98,24 @@ Dashboard yang disediakan:
 
 - `Production Monitoring / Reusable Server Uptime and Resources`
 - `HRIS Monitoring / HRIS Nusawork Infrastructure`
+
+## Alert History
+
+Alertmanager mengirim webhook ke service `alert-history`.
+
+Endpoint lokal:
+
+```text
+http://127.0.0.1:18080/history/
+```
+
+Jika Nginx dipasang, proxy-kan `/history/` ke `alert-history:8080` dan pastikan redirect `/history` mempertahankan query string.
+
+Database tersimpan di:
+
+```text
+data/alert-history/alert-history.db
+```
 
 ## Dokumentasi
 

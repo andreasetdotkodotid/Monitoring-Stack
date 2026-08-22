@@ -5,12 +5,24 @@ route:
   group_interval: 5m
   repeat_interval: 4h
   routes:
-    - matchers:
-        - severity="critical"
-      receiver: email-critical
+    - receiver: alert-history
+      continue: true
+      matchers:
+        - alertname=~".+"
+    - receiver: email-critical
       repeat_interval: 1h
+      matchers:
+        - severity="critical"
+    - receiver: email-default
+      matchers:
+        - severity!="critical"
 
 receivers:
+  - name: alert-history
+    webhook_configs:
+      - url: http://alert-history:8080/webhook
+        send_resolved: true
+
   - name: email-default
     email_configs:
       - to: ${SMTP_TO}
