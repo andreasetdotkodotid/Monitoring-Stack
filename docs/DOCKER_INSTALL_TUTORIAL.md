@@ -8,6 +8,12 @@ Jika ingin install tanpa Docker, baca:
 docs/MANUAL_INSTALL_TUTORIAL.md
 ```
 
+Jika ingin memahami konfigurasi Prometheus, Blackbox, recording rules, dan alert rules, baca:
+
+```text
+docs/CONFIGURATION_GUIDE.md
+```
+
 ## 1. Komponen
 
 Stack Docker ini berisi:

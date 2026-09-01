@@ -122,6 +122,8 @@ data/alert-history/alert-history.db
 Dokumentasi detail ada di:
 
 ```text
+docs/DOCKER_INSTALL_TUTORIAL.md
+docs/CONFIGURATION_GUIDE.md
 docs/PRIVATE_MONITORING_RUNBOOK.md
 docs/MANUAL_INSTALL_TUTORIAL.md
 ```
