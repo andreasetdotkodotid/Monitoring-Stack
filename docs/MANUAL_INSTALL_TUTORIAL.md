@@ -33,12 +33,21 @@ Prometheus Alerts -> Alertmanager -> Email/Karma
 Buat user service:
 
 ```bash
-sudo useradd --no-create-home --shell /usr/sbin/nologin prometheus
-sudo useradd --no-create-home --shell /usr/sbin/nologin alertmanager
-sudo useradd --no-create-home --shell /usr/sbin/nologin blackbox_exporter
-sudo useradd --no-create-home --shell /usr/sbin/nologin node_exporter
-sudo useradd --no-create-home --shell /usr/sbin/nologin karma
+sudo useradd --system --no-create-home --shell /usr/sbin/nologin prometheus || true
+sudo useradd --system --no-create-home --shell /usr/sbin/nologin alertmanager || true
+sudo useradd --system --no-create-home --shell /usr/sbin/nologin blackbox_exporter || true
+sudo useradd --system --no-create-home --shell /usr/sbin/nologin node_exporter || true
+sudo useradd --system --no-create-home --shell /usr/sbin/nologin karma || true
 ```
+
+Jika ingin lebih eksplisit dan aman, buat group terlebih dahulu:
+
+```bash
+getent group karma >/dev/null || sudo groupadd --system karma
+id -u karma >/dev/null 2>&1 || sudo useradd --system --no-create-home --gid karma --shell /usr/sbin/nologin karma
+```
+
+Catatan: error `chown: invalid user: 'karma:karma'` berarti user atau group `karma` belum dibuat.
 
 ## 3. Install Prometheus
 
@@ -475,12 +484,29 @@ Lalu copy binary yang sesuai ke:
 /usr/local/bin/karma
 ```
 
+Pastikan user dan group `karma` sudah ada sebelum mengatur permission:
+
+```bash
+getent group karma >/dev/null || sudo groupadd --system karma
+id -u karma >/dev/null 2>&1 || sudo useradd --system --no-create-home --gid karma --shell /usr/sbin/nologin karma
+id karma
+```
+
 Buat folder config dan data:
 
 ```bash
 sudo mkdir -p /etc/karma /var/lib/karma
-sudo chown -R karma:karma /etc/karma /var/lib/karma
+sudo chown -R root:karma /etc/karma
+sudo chown -R karma:karma /var/lib/karma
+sudo chmod 750 /etc/karma /var/lib/karma
 ```
+
+Penjelasan permission:
+
+- `/etc/karma` dimiliki `root:karma` agar config tidak sembarang ditulis oleh service.
+- `/var/lib/karma` dimiliki `karma:karma` karena service boleh menulis data runtime di sana.
+- `chmod 750` membatasi akses hanya root dan group service.
+- File config nanti dibuat dengan permission `640`.
 
 Buat config:
 
@@ -504,6 +530,13 @@ listen:
 ui:
   title: Monitoring Alerts
   refresh: 30s
+```
+
+Set permission file config setelah disimpan:
+
+```bash
+sudo chown root:karma /etc/karma/karma.yml
+sudo chmod 640 /etc/karma/karma.yml
 ```
 
 Penjelasan:
