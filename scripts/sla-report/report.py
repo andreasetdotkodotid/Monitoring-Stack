@@ -10,7 +10,7 @@ import requests
 from croniter import croniter
 
 PROM = os.getenv('PROMETHEUS_URL', 'http://prometheus:9090')
-REPORTS = Path('/reports')
+REPORTS = Path(os.getenv('REPORT_DIR', '/reports'))
 CRON = os.getenv('REPORT_CRON', '5 8 1 * *')
 
 

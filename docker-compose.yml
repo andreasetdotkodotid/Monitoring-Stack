@@ -165,6 +165,7 @@ services:
       - SMTP_AUTH_PASSWORD=${SMTP_AUTH_PASSWORD}
       - SMTP_TO=${SMTP_TO}
       - REPORT_CRON=5 8 1 * *
+      - REPORT_DIR=/reports
     volumes:
       - ./data/sla-reports:/reports
     depends_on:

@@ -298,7 +298,135 @@ Test via domain:
 curl -k -I https://monitoring.example.com/history/
 ```
 
-## 12. Grafana Dashboard
+## 12. SLA Report Bulanan
+
+Stack Docker sudah memiliki service `sla-report` untuk generate laporan SLA bulanan dari Prometheus.
+
+Service ini didefinisikan di `docker-compose.yml`:
+
+```yaml
+sla-report:
+  build:
+    context: ./scripts/sla-report
+  environment:
+    - PROMETHEUS_URL=http://prometheus:9090
+    - SMTP_FROM=${SMTP_FROM}
+    - SMTP_SMARTHOST=${SMTP_SMARTHOST}
+    - SMTP_AUTH_USERNAME=${SMTP_AUTH_USERNAME}
+    - SMTP_AUTH_PASSWORD=${SMTP_AUTH_PASSWORD}
+    - SMTP_TO=${SMTP_TO}
+    - REPORT_CRON=5 8 1 * *
+    - REPORT_DIR=/reports
+  volumes:
+    - ./data/sla-reports:/reports
+```
+
+Artinya laporan dibuat dan dikirim setiap:
+
+```text
+tanggal 1, jam 08:05
+```
+
+Script yang dipakai:
+
+```text
+scripts/sla-report/report.py
+```
+
+Output CSV tersimpan di:
+
+```text
+data/sla-reports/
+```
+
+Query utama yang dipakai script:
+
+```promql
+host:availability_30d:ratio * 100
+```
+
+Jadi laporan saat ini menghitung availability berdasarkan recording rule 30 hari terakhir.
+
+### 12.1 Konfigurasi SMTP
+
+Pastikan `.env` sudah berisi:
+
+```env
+SMTP_FROM=monitoring@example.com
+SMTP_SMARTHOST=smtp.example.com:587
+SMTP_AUTH_USERNAME=monitoring@example.com
+SMTP_AUTH_PASSWORD=change-me
+SMTP_TO=sre@example.com
+```
+
+### 12.2 Build dan Jalankan Service
+
+```bash
+docker compose build sla-report
+docker compose up -d sla-report
+```
+
+Cek log:
+
+```bash
+docker compose logs -f sla-report
+```
+
+### 12.3 Test Generate Manual
+
+Script Docker default berjalan sebagai scheduler. Untuk test sekali jalan, cara paling mudah adalah menjalankan Python function dari container image:
+
+```bash
+docker compose run --rm --entrypoint python sla-report - <<'PY'
+from report import generate_report, send_email
+path = generate_report()
+print(path)
+send_email(path)
+PY
+```
+
+Jika hanya ingin generate file tanpa kirim email:
+
+```bash
+docker compose run --rm --entrypoint python sla-report - <<'PY'
+from report import generate_report
+print(generate_report())
+PY
+```
+
+Cek hasil file:
+
+```bash
+ls -lah data/sla-reports
+```
+
+### 12.4 Ubah Jadwal
+
+Ubah `REPORT_CRON` di `docker-compose.yml`.
+
+Contoh setiap Senin jam 08:00:
+
+```yaml
+- REPORT_CRON=0 8 * * 1
+```
+
+Setelah ubah jadwal:
+
+```bash
+docker compose up -d --build sla-report
+```
+
+### 12.5 Catatan Batasan Saat Ini
+
+Script saat ini belum menerima parameter tanggal custom. Periode yang dipakai masih tetap 30 hari terakhir berdasarkan metric:
+
+```promql
+host:availability_30d:ratio
+```
+
+Kalau ingin generate SLA dari tanggal tertentu sampai tanggal tertentu, script perlu ditambah mode custom range dengan Prometheus query range.
+
+## 13. Grafana Dashboard
 
 Dashboard tersedia:
 
@@ -319,7 +447,7 @@ Dashboard HRIS berisi:
 - Service systemd
 - Availability timeline
 
-## 13. Query Penting
+## 14. Query Penting
 
 Availability 30 hari:
 
@@ -339,7 +467,7 @@ Service status timeline:
 node_systemd_unit_state{job="node",host=~"$host",state="active",name=~"(nginx|php.*fpm|mysql|mysqld|mariadb|redis|redis-server|docker|ssh|sshd)\\.service"}
 ```
 
-## 14. Update dari GitHub
+## 15. Update dari GitHub
 
 ```bash
 cd /root/Monitoring-Stack
@@ -353,7 +481,7 @@ docker compose up -d
 
 Jika ingin menjaga `.env`, `data`, dan `nginx`, jangan hapus folder tersebut.
 
-## 15. Backup
+## 16. Backup
 
 Backup minimal:
 
@@ -375,7 +503,7 @@ config/alertmanager
 nginx/configuration
 ```
 
-## 16. Troubleshooting
+## 17. Troubleshooting
 
 Prometheus permission denied:
 

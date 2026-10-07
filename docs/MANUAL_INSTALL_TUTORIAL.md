@@ -37,6 +37,7 @@ sudo useradd --no-create-home --shell /usr/sbin/nologin prometheus
 sudo useradd --no-create-home --shell /usr/sbin/nologin alertmanager
 sudo useradd --no-create-home --shell /usr/sbin/nologin blackbox_exporter
 sudo useradd --no-create-home --shell /usr/sbin/nologin node_exporter
+sudo useradd --no-create-home --shell /usr/sbin/nologin karma
 ```
 
 ## 3. Install Prometheus
@@ -436,7 +437,171 @@ sudo systemctl enable --now alertmanager
 curl http://127.0.0.1:9093/-/ready
 ```
 
-## 6. Recording Rules dan Alert Rules
+## 6. Install Karma
+
+Karma adalah UI untuk melihat alert dari Alertmanager.
+
+Bedanya dengan Alertmanager UI:
+
+- Alertmanager UI bawaan cukup sederhana.
+- Karma lebih nyaman untuk melihat alert aktif, grouping, filter, silence, dan status alert.
+- Karma tidak menghasilkan alert sendiri. Karma hanya membaca alert dari Alertmanager.
+
+Alur:
+
+```text
+Prometheus alert rules -> Alertmanager -> Karma UI
+```
+
+Download binary Karma:
+
+```bash
+cd /tmp
+wget https://github.com/prymitive/karma/releases/download/v0.121/karma-linux-amd64.tar.gz
+tar xzf karma-linux-amd64.tar.gz
+sudo cp karma-linux-amd64 /usr/local/bin/karma
+sudo chmod +x /usr/local/bin/karma
+```
+
+Jika nama file hasil extract berbeda, cek isi folder:
+
+```bash
+ls -lah /tmp
+```
+
+Lalu copy binary yang sesuai ke:
+
+```text
+/usr/local/bin/karma
+```
+
+Buat folder config dan data:
+
+```bash
+sudo mkdir -p /etc/karma /var/lib/karma
+sudo chown -R karma:karma /etc/karma /var/lib/karma
+```
+
+Buat config:
+
+```bash
+sudo nano /etc/karma/karma.yml
+```
+
+Isi minimal:
+
+```yaml
+alertmanager:
+  interval: 30s
+  servers:
+    - name: local-alertmanager
+      uri: http://127.0.0.1:9093
+
+listen:
+  address: 127.0.0.1
+  port: 8080
+
+ui:
+  title: Monitoring Alerts
+  refresh: 30s
+```
+
+Penjelasan:
+
+- `uri` mengarah ke Alertmanager manual di `127.0.0.1:9093`.
+- `listen.address=127.0.0.1` berarti Karma hanya bisa diakses lokal server.
+- Untuk akses public, gunakan Nginx reverse proxy.
+
+Buat systemd service:
+
+```bash
+sudo nano /etc/systemd/system/karma.service
+```
+
+Isi:
+
+```ini
+[Unit]
+Description=Karma Alert Dashboard
+After=network-online.target alertmanager.service
+Wants=network-online.target
+
+[Service]
+User=karma
+Group=karma
+ExecStart=/usr/local/bin/karma --config.file=/etc/karma/karma.yml
+Restart=always
+RestartSec=5
+WorkingDirectory=/var/lib/karma
+NoNewPrivileges=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/karma
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Start service:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now karma
+sudo systemctl status karma
+```
+
+Test lokal:
+
+```bash
+curl -I http://127.0.0.1:8080
+```
+
+Jika berhasil, Karma akan mengembalikan HTTP response dari UI.
+
+Cek log jika gagal:
+
+```bash
+sudo journalctl -u karma -n 100 --no-pager
+```
+
+Jika Karma tidak menampilkan alert, cek Alertmanager:
+
+```bash
+curl http://127.0.0.1:9093/api/v2/alerts
+```
+
+Jika output Alertmanager kosong, berarti memang belum ada alert aktif.
+
+Untuk akses via Nginx, tambahkan location seperti ini di server block monitoring:
+
+```nginx
+location /karma/ {
+  proxy_pass http://127.0.0.1:8080/;
+  proxy_set_header Host $host;
+  proxy_set_header X-Real-IP $remote_addr;
+  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  proxy_set_header X-Forwarded-Proto https;
+}
+
+location = /karma {
+  return 301 /karma/;
+}
+```
+
+Reload Nginx:
+
+```bash
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+Akses:
+
+```text
+https://monitoring.example.com/karma/
+```
+
+## 7. Recording Rules dan Alert Rules
 
 Buat rules:
 
@@ -526,7 +691,7 @@ Jika reload gagal:
 curl -X POST http://127.0.0.1:9090/-/reload
 ```
 
-## 7. Install Node Exporter di Server Target
+## 8. Install Node Exporter di Server Target
 
 Download:
 
@@ -571,7 +736,7 @@ sudo systemctl enable --now node_exporter
 curl -s localhost:9100/metrics | grep node_systemd_unit_state
 ```
 
-## 8. Install Grafana
+## 9. Install Grafana
 
 Tambahkan repository:
 
@@ -605,7 +770,7 @@ admin / admin
 
 Segera ganti password.
 
-## 9. Tambahkan Datasource Prometheus di Grafana
+## 10. Tambahkan Datasource Prometheus di Grafana
 
 Bisa lewat UI:
 
@@ -651,7 +816,7 @@ Restart:
 sudo systemctl restart grafana-server
 ```
 
-## 10. Cara Bikin Dashboard Seperti Sekarang
+## 11. Cara Bikin Dashboard Seperti Sekarang
 
 Dashboard sekarang punya konsep dua row:
 
@@ -818,7 +983,7 @@ Service Down Count:
 sum(1 - node_systemd_unit_state{job="node",host=~"$host",state="active",name=~"(nginx|php.*fpm|mysql|mysqld|mariadb|redis|redis-server|docker|ssh|sshd)\\.service"}) or vector(0)
 ```
 
-## 11. Visual Style Dashboard
+## 12. Visual Style Dashboard
 
 Gunakan aturan sederhana:
 
@@ -832,7 +997,7 @@ Gunakan aturan sederhana:
 - Row 1 jangan filter host.
 - Row 2 wajib filter host.
 
-## 12. Import Dashboard JSON
+## 13. Import Dashboard JSON
 
 Jika punya file JSON dashboard:
 
@@ -878,7 +1043,7 @@ Restart:
 sudo systemctl restart grafana-server
 ```
 
-## 13. Nginx Reverse Proxy Manual
+## 14. Nginx Reverse Proxy Manual
 
 Install:
 
@@ -936,7 +1101,222 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-## 14. Alert History Manual Opsional
+## 15. SLA Report Manual
+
+Script SLA report dari project Docker juga bisa dipakai pada instalasi manual.
+
+Script yang dipakai:
+
+```text
+scripts/sla-report/report.py
+```
+
+Fungsinya:
+
+- query Prometheus
+- menghitung availability host
+- membuat file CSV
+- mengirim file CSV via email SMTP
+
+### 15.1 Install Dependency
+
+Install Python dan pip:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y python3 python3-pip python3-venv
+```
+
+Buat folder aplikasi dan laporan:
+
+```bash
+sudo mkdir -p /opt/sla-report /var/lib/sla-reports
+sudo cp scripts/sla-report/report.py /opt/sla-report/report.py
+sudo chown -R root:root /opt/sla-report
+sudo chown -R prometheus:prometheus /var/lib/sla-reports
+```
+
+Buat virtual environment:
+
+```bash
+sudo python3 -m venv /opt/sla-report/venv
+sudo /opt/sla-report/venv/bin/pip install --upgrade pip
+sudo /opt/sla-report/venv/bin/pip install requests croniter
+```
+
+### 15.2 Siapkan Environment File
+
+Buat file environment:
+
+```bash
+sudo nano /etc/sla-report.env
+```
+
+Isi contoh:
+
+```env
+PROMETHEUS_URL=http://127.0.0.1:9090
+SMTP_FROM=monitoring@example.com
+SMTP_SMARTHOST=smtp.example.com:587
+SMTP_AUTH_USERNAME=monitoring@example.com
+SMTP_AUTH_PASSWORD=change-me
+SMTP_TO=sre@example.com
+REPORT_CRON=5 8 1 * *
+REPORT_DIR=/var/lib/sla-reports
+```
+
+Amankan permission:
+
+```bash
+sudo chmod 600 /etc/sla-report.env
+sudo chown root:root /etc/sla-report.env
+```
+
+### 15.3 Buat Wrapper Script Sekali Jalan
+
+Script `report.py` default berjalan sebagai scheduler terus-menerus. Untuk manual install, lebih mudah membuat wrapper untuk generate sekali jalan.
+
+Buat file:
+
+```bash
+sudo nano /opt/sla-report/run-once.py
+```
+
+Isi:
+
+```python
+from report import generate_report, send_email
+
+path = generate_report()
+print(path)
+send_email(path)
+```
+
+### 15.4 Test Generate Manual
+
+Load environment lalu jalankan:
+
+```bash
+set -a
+. /etc/sla-report.env
+set +a
+REPORT_DIR=/var/lib/sla-reports /opt/sla-report/venv/bin/python /opt/sla-report/run-once.py
+```
+
+Jika berhasil, file CSV akan muncul di:
+
+```text
+/var/lib/sla-reports
+```
+
+Cek:
+
+```bash
+ls -lah /var/lib/sla-reports
+```
+
+Script mendukung `REPORT_DIR`, jadi lokasi output bisa diatur dari environment.
+
+Contoh:
+
+```bash
+REPORT_DIR=/var/lib/sla-reports /opt/sla-report/venv/bin/python /opt/sla-report/run-once.py
+```
+
+### 15.5 Jadwalkan Dengan Cron
+
+Edit crontab root:
+
+```bash
+sudo crontab -e
+```
+
+Tambahkan:
+
+```cron
+5 8 1 * * set -a; . /etc/sla-report.env; set +a; REPORT_DIR=/var/lib/sla-reports /opt/sla-report/venv/bin/python /opt/sla-report/run-once.py >> /var/log/sla-report.log 2>&1
+```
+
+Artinya laporan dikirim setiap tanggal 1 jam 08:05.
+
+### 15.6 Alternatif Systemd Timer
+
+Buat service:
+
+```bash
+sudo nano /etc/systemd/system/sla-report.service
+```
+
+Isi:
+
+```ini
+[Unit]
+Description=Generate SLA Report
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/sla-report.env
+Environment=REPORT_DIR=/var/lib/sla-reports
+WorkingDirectory=/opt/sla-report
+ExecStart=/opt/sla-report/venv/bin/python /opt/sla-report/run-once.py
+```
+
+Buat timer:
+
+```bash
+sudo nano /etc/systemd/system/sla-report.timer
+```
+
+Isi:
+
+```ini
+[Unit]
+Description=Monthly SLA Report Timer
+
+[Timer]
+OnCalendar=*-*-01 08:05:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+```
+
+Aktifkan:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now sla-report.timer
+```
+
+Test manual:
+
+```bash
+sudo systemctl start sla-report.service
+sudo systemctl status sla-report.service
+journalctl -u sla-report.service -n 100 --no-pager
+```
+
+Cek jadwal:
+
+```bash
+systemctl list-timers sla-report.timer
+```
+
+### 15.7 Batasan Script Saat Ini
+
+Script saat ini menghitung SLA dari recording rule:
+
+```promql
+host:availability_30d:ratio * 100
+```
+
+Artinya periode laporan selalu berdasarkan 30 hari terakhir.
+
+Belum ada parameter untuk generate SLA dari tanggal custom, misalnya dari seminggu lalu sampai hari ini.
+
+Untuk fitur custom range, script perlu diubah agar bisa query Prometheus berdasarkan waktu `start`, `end`, dan `step`.
+
+## 16. Alert History Manual Opsional
 
 Pada instalasi manual, Alert History bisa dijalankan sebagai service Python kecil yang menerima webhook Alertmanager dan menyimpan data ke SQLite.
 
@@ -1015,7 +1395,7 @@ Database tersimpan di:
 /var/lib/alert-history/alert-history.db
 ```
 
-## 15. Troubleshooting Manual
+## 17. Troubleshooting Manual
 
 Prometheus config error:
 
@@ -1068,6 +1448,17 @@ journalctl -u grafana-server -f
 ls -la /var/lib/grafana/dashboards/hris
 ```
 
+Karma tidak tampil atau kosong:
+
+```bash
+systemctl status karma
+journalctl -u karma -n 100 --no-pager
+curl http://127.0.0.1:9093/api/v2/alerts
+curl -I http://127.0.0.1:8080
+```
+
+Jika `api/v2/alerts` kosong, Karma juga kosong karena tidak ada alert aktif di Alertmanager.
+
 Alertmanager email gagal:
 
 ```bash
@@ -1075,7 +1466,7 @@ journalctl -u alertmanager -f
 amtool check-config /etc/alertmanager/alertmanager.yml
 ```
 
-## 16. Ringkasan
+## 18. Ringkasan
 
 Manual install memberi pemahaman lebih dalam karena semua komponen terlihat jelas:
 
